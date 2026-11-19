@@ -1,0 +1,1572 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>เซียนประโยคภาษาไทย - เกมทายโครงสร้างประโยค</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Kanit & Sarabun -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700;800&family=Sarabun:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Font Awesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Tone.js for Sound Effects -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+    <!-- Canvas Confetti for Celebration -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+    <style>
+        body {
+            font-family: 'Kanit', sans-serif;
+            background: linear-gradient(135deg, #EEF2FF 0%, #E0E7FF 50%, #F3E8FF 100%);
+            min-height: 100vh;
+            overflow-x: hidden;
+            user-select: none;
+        }
+
+        .font-sarabun {
+            font-family: 'Sarabun', sans-serif;
+        }
+
+        /* Custom Animations */
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-8px); }
+        }
+        .animate-float {
+            animation: float 3s ease-in-out infinite;
+        }
+
+        @keyframes popIn {
+            0% { opacity: 0; transform: scale(0.92) translateY(10px); }
+            100% { opacity: 1; transform: scale(1) translateY(0); }
+        }
+        .animate-pop-in {
+            animation: popIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20%, 60% { transform: translateX(-6px); }
+            40%, 80% { transform: translateX(6px); }
+        }
+        .animate-shake {
+            animation: shake 0.4s ease-in-out;
+        }
+
+        /* 3D Button Style */
+        .btn-3d {
+            transition: all 0.15s ease;
+            box-shadow: 0 5px 0 rgba(0, 0, 0, 0.15);
+        }
+        .btn-3d:active:not(:disabled) {
+            transform: translateY(4px);
+            box-shadow: 0 1px 0 rgba(0, 0, 0, 0.15);
+        }
+
+        .btn-primary-3d {
+            background: linear-gradient(135deg, #4F46E5 0%, #6366F1 100%);
+            box-shadow: 0 5px 0 #3730A3;
+        }
+        .btn-primary-3d:active:not(:disabled) {
+            transform: translateY(4px);
+            box-shadow: 0 1px 0 #3730A3;
+        }
+
+        .btn-emerald-3d {
+            background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+            box-shadow: 0 5px 0 #065F46;
+        }
+        .btn-emerald-3d:active:not(:disabled) {
+            transform: translateY(4px);
+            box-shadow: 0 1px 0 #065F46;
+        }
+
+        /* Matching Game Styles */
+        .match-node {
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            touch-action: none;
+        }
+        .match-node.selected {
+            ring: 4px;
+            transform: scale(1.02);
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+    </style>
+</head>
+<body class="text-slate-800 flex flex-col justify-between">
+
+    <!-- Top Navigation Bar -->
+    <header class="w-full bg-white/80 backdrop-blur-md border-b border-indigo-100 sticky top-0 z-40">
+        <div class="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
+            <div class="flex items-center gap-2.5 cursor-pointer" onclick="goHome()">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-600 to-purple-600 text-white flex items-center justify-center shadow-md">
+                    <i class="fa-solid fa-book-open-reader text-lg"></i>
+                </div>
+                <div>
+                    <h1 class="font-bold text-lg sm:text-xl text-indigo-950 leading-tight">เซียนประโยคภาษาไทย</h1>
+                    <p class="text-xs text-slate-500 hidden sm:block">ท้าดวลเพื่อน แยกแยะประโยคความเดียว • รวม • ซ้อน</p>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-2 sm:gap-3">
+                <!-- Pool Remaining Counter -->
+                <div class="hidden md:flex items-center gap-1.5 bg-indigo-50 text-indigo-700 px-3 py-1.5 rounded-full text-xs font-medium border border-indigo-100" title="จำนวนข้อสอบในคลังที่ยังไม่ซ้ำ">
+                    <i class="fa-solid fa-database"></i>
+                    <span>คลังข้อสอบใหม่: <strong id="pool-counter">30</strong> ข้อ</span>
+                </div>
+
+                <!-- Sound Toggle Button -->
+                <button id="sound-toggle" onclick="toggleSound()" class="w-10 h-10 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center justify-center transition" title="เปิด/ปิดเสียง">
+                    <i id="sound-icon" class="fa-solid fa-volume-high"></i>
+                </button>
+
+                <!-- Quick Guide Button -->
+                <button onclick="toggleGuideModal(true)" class="px-3 py-2 rounded-xl bg-amber-100 hover:bg-amber-200 text-amber-800 font-medium text-sm flex items-center gap-1.5 transition">
+                    <i class="fa-solid fa-lightbulb text-amber-600"></i>
+                    <span class="hidden sm:inline">ทบทวนหลักการ</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="flex-grow w-full max-w-4xl mx-auto px-4 py-6 sm:py-8 flex flex-col justify-center">
+
+        <!-- ==================== SCREEN 1: HOME SCREEN ==================== -->
+        <section id="screen-home" class="animate-pop-in">
+            <div class="bg-white rounded-3xl shadow-xl border border-indigo-50 p-6 sm:p-10 text-center relative overflow-hidden">
+                <!-- Decorative Background Blobs -->
+                <div class="absolute -top-16 -right-16 w-48 h-48 bg-indigo-100 rounded-full opacity-50 pointer-events-none"></div>
+                <div class="absolute -bottom-16 -left-16 w-48 h-48 bg-purple-100 rounded-full opacity-50 pointer-events-none"></div>
+
+                <!-- Hero Badge -->
+                <div class="inline-flex items-center gap-2 bg-indigo-50 border border-indigo-100 text-indigo-700 px-4 py-1.5 rounded-full text-sm font-medium mb-4 animate-float">
+                    <i class="fa-solid fa-users"></i>
+                    <span>โหมดเล่นกับเพื่อน • สุ่มคำถามไม่ซ้ำ!</span>
+                </div>
+
+                <h2 class="text-3xl sm:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 mb-3">
+                    เซียนประโยคภาษาไทย
+                </h2>
+                <p class="text-slate-600 max-w-xl mx-auto text-sm sm:text-base mb-8 font-sarabun">
+                    ทดสอบความแม่นยำเรื่อง <strong>ประโยคความเดียว ประโยคความรวม และประโยคความซ้อน</strong> 
+                    พร้อมเฉลยวิเคราะห์โครงสร้างแบบเจาะลึกทุกข้อ!
+                </p>
+
+                <!-- Player Name & Round Settings -->
+                <div class="max-w-2xl mx-auto grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6 text-left">
+                    <div class="bg-slate-50 p-4 rounded-2xl border border-slate-200/80">
+                        <label for="player-name" class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">
+                            <i class="fa-solid fa-user-pen text-indigo-500 mr-1"></i> ชื่อผู้เล่น (ส่งต่อท้าเพื่อน)
+                        </label>
+                        <input type="text" id="player-name" placeholder="เช่น น้องมิน, ทีมสายวิทย์..." maxlength="20"
+                            class="w-full px-3.5 py-2.5 rounded-xl bg-white border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium text-slate-800">
+                    </div>
+
+                    <div class="bg-slate-50 p-4 rounded-2xl border border-slate-200/80">
+                        <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">
+                            <i class="fa-solid fa-list-ol text-purple-500 mr-1"></i> จำนวนข้อต่อรอบ
+                        </label>
+                        <div class="grid grid-cols-3 gap-2" id="round-selector">
+                            <button type="button" onclick="selectRounds(5)" data-rounds="5" class="round-btn py-2.5 rounded-xl font-bold text-sm border-2 border-indigo-600 bg-indigo-600 text-white transition">
+                                5 ข้อ
+                            </button>
+                            <button type="button" onclick="selectRounds(8)" data-rounds="8" class="round-btn py-2.5 rounded-xl font-bold text-sm border-2 border-slate-200 bg-white text-slate-600 hover:border-indigo-300 transition">
+                                8 ข้อ
+                            </button>
+                            <button type="button" onclick="selectRounds(10)" data-rounds="10" class="round-btn py-2.5 rounded-xl font-bold text-sm border-2 border-slate-200 bg-white text-slate-600 hover:border-indigo-300 transition">
+                                10 ข้อ
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Mode Selection Cards -->
+                <div class="max-w-2xl mx-auto mb-8 text-left">
+                    <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2.5 text-center sm:text-left">
+                        <i class="fa-solid fa-gamepad text-pink-500 mr-1"></i> เลือกรูปแบบการเล่น
+                    </label>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+                        <!-- Mode 1: Choice -->
+                        <button type="button" onclick="selectMode('choice')" id="mode-card-choice"
+                            class="mode-card p-4 rounded-2xl border-2 border-indigo-600 bg-indigo-50/70 text-left transition relative group">
+                            <div class="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center mb-3 shadow-sm">
+                                <i class="fa-solid fa-list-check text-lg"></i>
+                            </div>
+                            <h3 class="font-bold text-slate-900 text-base mb-1">เลือกคำตอบ</h3>
+                            <p class="text-xs text-slate-600 font-sarabun leading-relaxed">อ่านประโยคแล้วกดเลือกชนิดของประโยคให้ถูกต้อง</p>
+                            <span class="mode-check absolute top-3 right-3 text-indigo-600 text-lg"><i class="fa-solid fa-circle-check"></i></span>
+                        </button>
+
+                        <!-- Mode 2: Match -->
+                        <button type="button" onclick="selectMode('match')" id="mode-card-match"
+                            class="mode-card p-4 rounded-2xl border-2 border-slate-200 bg-white hover:border-purple-300 text-left transition relative group">
+                            <div class="w-10 h-10 rounded-xl bg-purple-600 text-white flex items-center justify-center mb-3 shadow-sm">
+                                <i class="fa-solid fa-bezier-curve text-lg"></i>
+                            </div>
+                            <h3 class="font-bold text-slate-900 text-base mb-1">โยงเส้นจับคู่</h3>
+                            <p class="text-xs text-slate-600 font-sarabun leading-relaxed">ลากหรือแตะโยงเส้นจับคู่ประโยคกับชนิดคำตอบ</p>
+                            <span class="mode-check hidden absolute top-3 right-3 text-purple-600 text-lg"><i class="fa-solid fa-circle-check"></i></span>
+                        </button>
+
+                        <!-- Mode 3: Mixed -->
+                        <button type="button" onclick="selectMode('mixed')" id="mode-card-mixed"
+                            class="mode-card p-4 rounded-2xl border-2 border-slate-200 bg-white hover:border-pink-300 text-left transition relative group">
+                            <div class="w-10 h-10 rounded-xl bg-gradient-to-r from-indigo-500 to-pink-500 text-white flex items-center justify-center mb-3 shadow-sm">
+                                <i class="fa-solid fa-shuffle text-lg"></i>
+                            </div>
+                            <h3 class="font-bold text-slate-900 text-base mb-1">โหมดผสมสุดมันส์</h3>
+                            <p class="text-xs text-slate-600 font-sarabun leading-relaxed">สลับทั้งตอบชอยส์และโยงเส้นท้าทายไหวพริบ</p>
+                            <span class="mode-check hidden absolute top-3 right-3 text-pink-600 text-lg"><i class="fa-solid fa-circle-check"></i></span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Start Button -->
+                <button onclick="startGame()" class="btn-primary-3d text-white font-bold text-lg sm:text-xl px-10 py-4 rounded-2xl inline-flex items-center gap-3 w-full sm:w-auto justify-center">
+                    <i class="fa-solid fa-play"></i>
+                    <span>เริ่มท้าดวลเลย!</span>
+                </button>
+            </div>
+        </section>
+
+        <!-- ==================== SCREEN 2: GAMEPLAY SCREEN ==================== -->
+        <section id="screen-game" class="hidden animate-pop-in">
+            <!-- Game Status Header -->
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200/80 p-4 mb-5">
+                <div class="flex flex-wrap items-center justify-between gap-2 mb-2.5">
+                    <div class="flex items-center gap-2">
+                        <span class="bg-indigo-100 text-indigo-800 font-bold px-3 py-1 rounded-xl text-sm">
+                            ข้อที่ <span id="current-q-num">1</span> / <span id="total-q-num">5</span>
+                        </span>
+                        <span id="player-badge" class="bg-purple-50 text-purple-700 border border-purple-200 px-3 py-1 rounded-xl text-xs font-semibold">
+                            <i class="fa-solid fa-user mr-1"></i> <span id="display-player-name">ผู้ท้าชิง</span>
+                        </span>
+                    </div>
+
+                    <div class="flex items-center gap-3">
+                        <div class="text-sm font-semibold text-slate-600">
+                            คะแนน: <span id="current-score" class="text-emerald-600 font-extrabold text-lg">0</span>
+                        </div>
+                        <button onclick="confirmQuitGame()" class="text-xs text-slate-400 hover:text-rose-500 px-2 py-1 rounded-lg hover:bg-rose-50 transition">
+                            <i class="fa-solid fa-xmark mr-1"></i>ออก
+                        </button>
+                    </div>
+                </div>
+                <!-- Progress Bar -->
+                <div class="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden">
+                    <div id="progress-bar" class="h-full bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 transition-all duration-500 rounded-full" style="width: 20%;"></div>
+                </div>
+            </div>
+
+            <!-- SUB-VIEW A: MULTIPLE CHOICE MODE -->
+            <div id="view-choice" class="hidden">
+                <div class="bg-white rounded-3xl shadow-lg border border-indigo-50 p-6 sm:p-8 mb-5">
+                    <div class="flex items-center justify-between mb-4">
+                        <span class="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-indigo-600 bg-indigo-50 px-3 py-1 rounded-full">
+                            <i class="fa-solid fa-circle-question"></i> จงวิเคราะห์ประโยคต่อไปนี้
+                        </span>
+                    </div>
+
+                    <!-- Question Sentence Box -->
+                    <div class="bg-gradient-to-br from-slate-50 to-indigo-50/40 border-2 border-indigo-100 rounded-2xl p-6 sm:p-8 text-center my-4">
+                        <p id="choice-sentence" class="text-2xl sm:text-3xl font-bold text-slate-800 leading-relaxed">
+                            "ฉันชอบอ่านหนังสือ แต่พี่ชอบดูหนัง"
+                        </p>
+                    </div>
+
+                    <!-- Options Grid -->
+                    <div id="choice-options" class="grid grid-cols-1 sm:grid-cols-3 gap-3.5 mt-6">
+                        <button onclick="submitChoiceAnswer('ความเดียว')" data-type="ความเดียว"
+                            class="choice-btn btn-3d bg-white hover:bg-sky-50 border-2 border-slate-200 hover:border-sky-400 rounded-2xl p-4 sm:p-5 text-center transition group">
+                            <div class="w-11 h-11 rounded-full bg-sky-100 text-sky-600 mx-auto mb-2.5 flex items-center justify-center font-bold text-lg group-hover:scale-110 transition">
+                                1
+                            </div>
+                            <div class="font-bold text-lg text-slate-800">ประโยคความเดียว</div>
+                            <div class="text-xs text-slate-500 mt-1 font-sarabun">ใจความเดียว ประธาน-กริยา 1 ชุด</div>
+                        </button>
+
+                        <button onclick="submitChoiceAnswer('ความรวม')" data-type="ความรวม"
+                            class="choice-btn btn-3d bg-white hover:bg-amber-50 border-2 border-slate-200 hover:border-amber-400 rounded-2xl p-4 sm:p-5 text-center transition group">
+                            <div class="w-11 h-11 rounded-full bg-amber-100 text-amber-600 mx-auto mb-2.5 flex items-center justify-center font-bold text-lg group-hover:scale-110 transition">
+                                2
+                            </div>
+                            <div class="font-bold text-lg text-slate-800">ประโยคความรวม</div>
+                            <div class="text-xs text-slate-500 mt-1 font-sarabun">มีสันธานเชื่อม (และ, แต่, หรือ, เพราะ)</div>
+                        </button>
+
+                        <button onclick="submitChoiceAnswer('ความซ้อน')" data-type="ความซ้อน"
+                            class="choice-btn btn-3d bg-white hover:bg-purple-50 border-2 border-slate-200 hover:border-purple-400 rounded-2xl p-4 sm:p-5 text-center transition group">
+                            <div class="w-11 h-11 rounded-full bg-purple-100 text-purple-600 mx-auto mb-2.5 flex items-center justify-center font-bold text-lg group-hover:scale-110 transition">
+                                3
+                            </div>
+                            <div class="font-bold text-lg text-slate-800">ประโยคความซ้อน</div>
+                            <div class="text-xs text-slate-500 mt-1 font-sarabun">ประโยคหลัก + ย่อย (ที่, ซึ่ง, อัน, ว่า, จน)</div>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SUB-VIEW B: LINE MATCHING MODE -->
+            <div id="view-match" class="hidden">
+                <div class="bg-white rounded-3xl shadow-lg border border-purple-50 p-5 sm:p-7 mb-5">
+                    <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
+                        <div>
+                            <span class="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-purple-600 bg-purple-50 px-3 py-1 rounded-full">
+                                <i class="fa-solid fa-bezier-curve"></i> โหมดโยงเส้นจับคู่ (3 ข้อ)
+                            </span>
+                            <p class="text-xs sm:text-sm text-slate-500 mt-1 font-sarabun">
+                                แตะเลือก <strong>ประโยคฝั่งซ้าย</strong> แล้วแตะ <strong>ชนิดประโยคฝั่งขวา</strong> (หรือลากเส้นเชื่อม)
+                            </p>
+                        </div>
+                        <button id="clear-lines-btn" onclick="clearAllLines()" class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold px-3 py-2 rounded-xl transition flex items-center gap-1.5">
+                            <i class="fa-solid fa-rotate-left"></i> ล้างเส้นทั้งหมด
+                        </button>
+                    </div>
+
+                    <!-- Interactive Matching Board with SVG Overlay -->
+                    <div id="match-board" class="relative grid grid-cols-12 gap-2 sm:gap-6 items-center my-4 py-2">
+                        <!-- SVG Layer for Drawing Lines -->
+                        <svg id="match-svg" class="absolute inset-0 w-full h-full pointer-events-none z-10"></svg>
+
+                        <!-- Left Column: Sentences (7 cols on mobile, 7 cols on desktop) -->
+                        <div id="match-left-col" class="col-span-7 flex flex-col gap-3.5 z-20">
+                            <!-- Dynamically injected -->
+                        </div>
+
+                        <!-- Spacer (1 col) -->
+                        <div class="col-span-1"></div>
+
+                        <!-- Right Column: Categories (4 cols) -->
+                        <div id="match-right-col" class="col-span-4 flex flex-col gap-3.5 z-20">
+                            <!-- Dynamically injected -->
+                        </div>
+                    </div>
+
+                    <!-- Check Matching Answers Button -->
+                    <div id="match-submit-container" class="mt-6 text-center">
+                        <button id="btn-check-match" onclick="submitMatchAnswers()" disabled
+                            class="btn-emerald-3d disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold text-base sm:text-lg px-8 py-3.5 rounded-2xl inline-flex items-center gap-2 transition">
+                            <i class="fa-solid fa-check-double"></i>
+                            <span>ตรวจคำตอบการโยงเส้น (<span id="connected-count">0</span>/3)</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ==================== FEEDBACK & EXPLANATION PANEL ==================== -->
+            <div id="feedback-panel" class="hidden animate-pop-in bg-white rounded-3xl shadow-xl border-2 p-6 sm:p-8 mb-6">
+                <!-- Result Banner -->
+                <div id="feedback-banner" class="flex items-center gap-4 p-4 rounded-2xl mb-5">
+                    <div id="feedback-icon-box" class="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl shrink-0">
+                        <i id="feedback-icon" class="fa-solid fa-check"></i>
+                    </div>
+                    <div>
+                        <h3 id="feedback-title" class="text-xl sm:text-2xl font-extrabold">ยอดเยี่ยม! ถูกต้องครับ</h3>
+                        <p id="feedback-subtitle" class="text-sm font-sarabun opacity-90">คุณวิเคราะห์โครงสร้างประโยคได้แม่นยำมาก</p>
+                    </div>
+                </div>
+
+                <!-- Detailed Grammar Breakdown List -->
+                <div class="space-y-3.5" id="explanation-list">
+                    <!-- Dynamically populated explanation cards -->
+                </div>
+
+                <!-- Next Question Button -->
+                <div class="mt-7 flex justify-end">
+                    <button id="btn-next-question" onclick="nextQuestion()"
+                        class="btn-primary-3d text-white font-bold text-base sm:text-lg px-8 py-3.5 rounded-2xl inline-flex items-center gap-2.5 w-full sm:w-auto justify-center">
+                        <span id="next-btn-text">ข้อต่อไป</span>
+                        <i class="fa-solid fa-arrow-right"></i>
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==================== SCREEN 3: SUMMARY & PASS TO FRIEND ==================== -->
+        <section id="screen-summary" class="hidden animate-pop-in">
+            <div class="bg-white rounded-3xl shadow-xl border border-indigo-50 p-6 sm:p-10 text-center">
+                <!-- Trophy / Medal Icon -->
+                <div id="summary-badge-icon" class="w-20 h-20 rounded-3xl bg-gradient-to-br from-amber-400 to-orange-500 text-white mx-auto mb-4 flex items-center justify-center text-4xl shadow-lg animate-float">
+                    <i class="fa-solid fa-trophy"></i>
+                </div>
+
+                <p class="text-sm font-semibold text-indigo-600 uppercase tracking-wider mb-1">
+                    สรุปผลการท้าดวลของ <span id="summary-player-name" class="underline">ผู้เล่น</span>
+                </p>
+                <h2 id="summary-rank-title" class="text-2xl sm:text-4xl font-extrabold text-slate-900 mb-2">
+                    ปรมาจารย์ภาษาไทย!
+                </h2>
+                <p id="summary-rank-desc" class="text-slate-500 text-sm sm:text-base font-sarabun mb-6">
+                    แยกแยะประโยคความเดียว ความรวม และความซ้อนได้อย่างเฉียบขาด
+                </p>
+
+                <!-- Score Stats Cards -->
+                <div class="grid grid-cols-3 gap-3 max-w-lg mx-auto mb-8">
+                    <div class="bg-emerald-50 border border-emerald-100 rounded-2xl p-4">
+                        <div class="text-xs text-emerald-700 font-semibold mb-1">คะแนนรวม</div>
+                        <div class="text-2xl sm:text-3xl font-extrabold text-emerald-600">
+                            <span id="summary-score">0</span><span class="text-base font-normal text-emerald-500">/<span id="summary-max-score">5</span></span>
+                        </div>
+                    </div>
+                    <div class="bg-indigo-50 border border-indigo-100 rounded-2xl p-4">
+                        <div class="text-xs text-indigo-700 font-semibold mb-1">ความแม่นยำ</div>
+                        <div class="text-2xl sm:text-3xl font-extrabold text-indigo-600">
+                            <span id="summary-accuracy">0</span>%
+                        </div>
+                    </div>
+                    <div class="bg-purple-50 border border-purple-100 rounded-2xl p-4">
+                        <div class="text-xs text-purple-700 font-semibold mb-1">คลังข้อใหม่</div>
+                        <div class="text-2xl sm:text-3xl font-extrabold text-purple-600">
+                            <span id="summary-remaining-pool">25</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Review History Accordion -->
+                <div class="max-w-2xl mx-auto text-left mb-8">
+                    <h4 class="font-bold text-slate-700 text-sm uppercase tracking-wider mb-3 flex items-center gap-2">
+                        <i class="fa-solid fa-clipboard-list text-indigo-500"></i> ทบทวนประโยคที่เล่นในรอบนี้
+                    </h4>
+                    <div id="summary-review-list" class="space-y-2.5 max-h-64 overflow-y-auto pr-1">
+                        <!-- Dynamically filled -->
+                    </div>
+                </div>
+
+                <!-- Action Buttons: Pass to Friend / Home -->
+                <div class="flex flex-col sm:flex-row items-center justify-center gap-3.5">
+                    <button onclick="passToFriend()" class="btn-emerald-3d text-white font-bold text-base sm:text-lg px-7 py-4 rounded-2xl inline-flex items-center gap-2.5 w-full sm:w-auto justify-center">
+                        <i class="fa-solid fa-user-plus"></i>
+                        <span>ส่งต่อให้เพื่อนเล่น (สุ่มข้อใหม่ไม่ซ้ำ)</span>
+                    </button>
+
+                    <button onclick="goHome()" class="btn-3d bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-base px-6 py-4 rounded-2xl inline-flex items-center gap-2 w-full sm:w-auto justify-center">
+                        <i class="fa-solid fa-house"></i>
+                        <span>เปลี่ยนโหมด / หน้าหลัก</span>
+                    </button>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- ==================== MODAL: QUICK GRAMMAR GUIDE ==================== -->
+    <div id="guide-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
+        <div class="bg-white rounded-3xl max-w-2xl w-full max-h-[88vh] overflow-y-auto p-6 sm:p-8 shadow-2xl animate-pop-in">
+            <div class="flex items-center justify-between border-b border-slate-100 pb-4 mb-5">
+                <div class="flex items-center gap-2.5">
+                    <div class="w-10 h-10 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center text-lg">
+                        <i class="fa-solid fa-graduation-cap"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-slate-900">ทริคจำง่าย: แยกประโยค 3 ชนิด</h3>
+                </div>
+                <button onclick="toggleGuideModal(false)" class="w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <div class="space-y-4 font-sarabun text-sm sm:text-base">
+                <!-- Card 1 -->
+                <div class="p-4 rounded-2xl bg-sky-50 border border-sky-200">
+                    <h4 class="font-kanit font-bold text-sky-900 text-lg mb-1">1. ประโยคความเดียว (เอกรรถประโยค)</h4>
+                    <p class="text-sky-800 mb-2">มีใจความสำคัญเพียงอย่างเดียว (ประธาน 1 + กริยาหลัก 1) แม้จะมีคำขยายยาวแค่ไหนก็ตาม</p>
+                    <div class="bg-white/80 p-2.5 rounded-xl text-slate-700">
+                        <strong>ตัวอย่าง:</strong> "คุณแม่ของฉันทำกับข้าวแสนอร่อยอยู่ในครัวตั้งแต่เช้า" <span class="text-xs text-sky-600">(มีกริยาหลักแค่ "ทำกับข้าว")</span>
+                    </div>
+                </div>
+
+                <!-- Card 2 -->
+                <div class="p-4 rounded-2xl bg-amber-50 border border-amber-200">
+                    <h4 class="font-kanit font-bold text-amber-900 text-lg mb-1">2. ประโยคความรวม (อเนกรรถประโยค)</h4>
+                    <p class="text-amber-800 mb-2">นำประโยคความเดียว 2 ประโยคมารวมกัน โดยมี <strong>คำสันธาน</strong> เชื่อม (คล้อยตาม, ขัดแย้ง, เลือกอย่างใดอย่างหนึ่ง, เป็นเหตุเป็นผล)</p>
+                    <div class="bg-white/80 p-2.5 rounded-xl text-slate-700">
+                        <strong>คำเชื่อมฮิต:</strong> <span class="bg-amber-200 px-1.5 py-0.5 rounded font-bold">และ</span>, <span class="bg-amber-200 px-1.5 py-0.5 rounded font-bold">แต่</span>, <span class="bg-amber-200 px-1.5 py-0.5 rounded font-bold">หรือ</span>, <span class="bg-amber-200 px-1.5 py-0.5 rounded font-bold">เพราะ</span>, <span class="bg-amber-200 px-1.5 py-0.5 rounded font-bold">จึง</span>, <span class="bg-amber-200 px-1.5 py-0.5 rounded font-bold">กว่า...ก็</span>
+                    </div>
+                </div>
+
+                <!-- Card 3 -->
+                <div class="p-4 rounded-2xl bg-purple-50 border border-purple-200">
+                    <h4 class="font-kanit font-bold text-purple-900 text-lg mb-1">3. ประโยคความซ้อน (สังกรประโยค)</h4>
+                    <p class="text-purple-800 mb-2">ประกอบด้วย <strong>ประโยคหลัก</strong> และ <strong>ประโยคย่อย</strong> ซ้อนอยู่เพื่อขยายคำนามหรือคำกริยา</p>
+                    <div class="bg-white/80 p-2.5 rounded-xl text-slate-700">
+                        <strong>คำเชื่อมฮิต:</strong> <span class="bg-purple-200 px-1.5 py-0.5 rounded font-bold">ที่</span>, <span class="bg-purple-200 px-1.5 py-0.5 rounded font-bold">ซึ่ง</span>, <span class="bg-purple-200 px-1.5 py-0.5 rounded font-bold">อัน</span>, <span class="bg-purple-200 px-1.5 py-0.5 rounded font-bold">ผู้</span>, <span class="bg-purple-200 px-1.5 py-0.5 rounded font-bold">ว่า</span>, <span class="bg-purple-200 px-1.5 py-0.5 rounded font-bold">ให้</span>, <span class="bg-purple-200 px-1.5 py-0.5 rounded font-bold">จน</span>, <span class="bg-purple-200 px-1.5 py-0.5 rounded font-bold">เมื่อ</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-6 text-right">
+                <button onclick="toggleGuideModal(false)" class="btn-primary-3d text-white font-bold px-6 py-2.5 rounded-xl">
+                    เข้าใจแล้ว ลุยต่อ!
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== CUSTOM CONFIRM MODAL (No window.confirm) ==================== -->
+    <div id="confirm-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
+        <div class="bg-white rounded-3xl max-w-sm w-full p-6 text-center shadow-2xl animate-pop-in">
+            <div class="w-14 h-14 rounded-2xl bg-rose-100 text-rose-600 mx-auto mb-3 flex items-center justify-center text-2xl">
+                <i class="fa-solid fa-door-open"></i>
+            </div>
+            <h3 class="text-xl font-bold text-slate-900 mb-1">ออกจากรอบนี้ใช่ไหม?</h3>
+            <p class="text-sm text-slate-500 font-sarabun mb-6">คะแนนในรอบปัจจุบันจะยังไม่ถูกบันทึก</p>
+            <div class="grid grid-cols-2 gap-3">
+                <button onclick="closeConfirmModal()" class="py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold transition">
+                    เล่นต่อ
+                </button>
+                <button onclick="executeQuitGame()" class="py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold transition">
+                    ออกหน้าหลัก
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="text-center py-4 text-xs text-slate-400">
+        เซียนประโยคภาษาไทย • สื่อการเรียนรู้เชิงโต้ตอบสำหรับเล่นกับเพื่อน
+    </footer>
+
+    <!-- ==================== JAVASCRIPT LOGIC ==================== -->
+    <script>
+        /**
+         * 1. คลังข้อสอบขนาดใหญ่ (30 ประโยคคุณภาพ) แบ่งครบทั้ง 3 ประเภท
+         * แต่ละข้อมีโครงสร้างวิเคราะห์แยกส่วนชัดเจนเพื่อแสดงตอนเฉลย
+         */
+        const QUESTION_BANK = [
+            // --- ประโยคความเดียว (10 ข้อ) ---
+            {
+                id: 1,
+                sentence: "คุณแม่ของฉันทำกับข้าวแสนอร่อยอยู่ในครัวตั้งแต่เช้า",
+                type: "ความเดียว",
+                connector: "ไม่มีคำเชื่อม (มีส่วนขยายยาว)",
+                breakdown: "<strong>ประธาน:</strong> คุณแม่ของฉัน | <strong>กริยาหลัก:</strong> ทำกับข้าว | <strong>ส่วนขยาย:</strong> แสนอร่อย อยู่ในครัว ตั้งแต่เช้า (มีกริยาหลักเพียงตัวเดียว จึงเป็นประโยคความเดียว)"
+            },
+            {
+                id: 2,
+                sentence: "นักฟุตบอลทีมชาติไทยฝึกซ้อมอย่างหนักทุกวัน",
+                type: "ความเดียว",
+                connector: "ไม่มีคำเชื่อม",
+                breakdown: "<strong>ประธาน:</strong> นักฟุตบอลทีมชาติไทย | <strong>กริยาหลัก:</strong> ฝึกซ้อม | <strong>ส่วนขยาย:</strong> อย่างหนัก ทุกวัน (มีใจความสำคัญเพียงอย่างเดียว)"
+            },
+            {
+                id: 3,
+                sentence: "ฝนตกหนักตลอดทั้งคืนจนถึงรุ่งเช้า",
+                type: "ความเดียว",
+                connector: "ไม่มีคำเชื่อม (คำว่า 'จนถึง' เป็นคำบุพบทบอกเวลา)",
+                breakdown: "<strong>ประธาน:</strong> ฝน | <strong>กริยาหลัก:</strong> ตก | <strong>ส่วนขยาย:</strong> หนัก ตลอดทั้งคืน จนถึงรุ่งเช้า (ไม่เป็นประโยคย่อย เพราะหลัง 'จนถึง' เป็นเพียงคำนามบอกเวลา)"
+            },
+            {
+                id: 4,
+                sentence: "เด็กน้อยวัยสามขวบกำลังเดินเตาะแตะอยู่หน้าบ้าน",
+                type: "ความเดียว",
+                connector: "ไม่มีคำเชื่อม",
+                breakdown: "<strong>ประธาน:</strong> เด็กน้อยวัยสามขวบ | <strong>กริยาหลัก:</strong> กำลังเดินเตาะแตะ | <strong>ส่วนขยาย:</strong> อยู่หน้าบ้าน"
+            },
+            {
+                id: 5,
+                sentence: "คุณครูประจำชั้นมอบรางวัลให้นักเรียนดีเด่นหน้าเสาธง",
+                type: "ความเดียว",
+                connector: "ไม่มีคำเชื่อม (คำว่า 'ให้' ทำหน้าที่เป็นคำบุพบท)",
+                breakdown: "<strong>ประธาน:</strong> คุณครูประจำชั้น | <strong>กริยา:</strong> มอบ | <strong>กรรม:</strong> รางวัล | <strong>ส่วนขยาย:</strong> ให้นักเรียนดีเด่น หน้าเสาธง"
+            },
+            {
+                id: 6,
+                sentence: "ลมพัดเย็นสบายในสวนสาธารณะยามเย็น",
+                type: "ความเดียว",
+                connector: "ไม่มีคำเชื่อม",
+                breakdown: "<strong>ประธาน:</strong> ลม | <strong>กริยา:</strong> พัด | <strong>ส่วนขยาย:</strong> เย็นสบาย ในสวนสาธารณะ ยามเย็น"
+            },
+            {
+                id: 7,
+                sentence: "พี่ชายคนโตของผมสอบติดคณะแพทยศาสตร์แล้ว",
+                type: "ความเดียว",
+                connector: "ไม่มีคำเชื่อม",
+                breakdown: "<strong>ประธาน:</strong> พี่ชายคนโตของผม | <strong>กริยา:</strong> สอบติด | <strong>กรรม:</strong> คณะแพทยศาสตร์"
+            },
+            {
+                id: 8,
+                sentence: "ฝูงนกพิราบสีขาวบินโฉบไปมาเหนือหลังคาโบสถ์",
+                type: "ความเดียว",
+                connector: "ไม่มีคำเชื่อม",
+                breakdown: "<strong>ประธาน:</strong> ฝูงนกพิราบสีขาว | <strong>กริยา:</strong> บินโฉบไปมา | <strong>ส่วนขยาย:</strong> เหนือหลังคาโบสถ์"
+            },
+            {
+                id: 9,
+                sentence: "คุณตาชอบดื่มกาแฟดำไม่ใส่น้ำตาลทุกเช้า",
+                type: "ความเดียว",
+                connector: "ไม่มีคำเชื่อม",
+                breakdown: "<strong>ประธาน:</strong> คุณตา | <strong>กริยา:</strong> ชอบดื่ม | <strong>กรรม:</strong> กาแฟดำไม่ใส่น้ำตาล (ใจความเดียว)"
+            },
+            {
+                id: 10,
+                sentence: "รถไฟฟ้าสายสีเหลืองวิ่งให้บริการผู้โดยสารตั้งแต่เช้ามืด",
+                type: "ความเดียว",
+                connector: "ไม่มีคำเชื่อม",
+                breakdown: "<strong>ประธาน:</strong> รถไฟฟ้าสายสีเหลือง | <strong>กริยา:</strong> วิ่งให้บริการ | <strong>กรรม:</strong> ผู้โดยสาร"
+            },
+
+            // --- ประโยคความรวม (10 ข้อ) ---
+            {
+                id: 11,
+                sentence: "ฉันชอบอ่านหนังสือการ์ตูน แต่พี่ชายชอบดูภาพยนตร์",
+                type: "ความรวม",
+                connector: "แต่ (สันธานเชื่อมความขัดแย้ง)",
+                breakdown: "<strong>ประโยคย่อย 1:</strong> ฉันชอบอ่านหนังสือการ์ตูน + <strong>คำเชื่อม:</strong> <span class='highlight-conn'>แต่</span> + <strong>ประโยคย่อย 2:</strong> พี่ชายชอบดูภาพยนตร์"
+            },
+            {
+                id: 12,
+                sentence: "เธอจะไปเดินเล่นที่ตลาดนัด หรือเธอจะพักผ่อนอยู่ที่บ้าน",
+                type: "ความรวม",
+                connector: "หรือ (สันธานเชื่อมความให้เลือกอย่างใดอย่างหนึ่ง)",
+                breakdown: "<strong>ประโยคย่อย 1:</strong> เธอจะไปเดินเล่นที่ตลาดนัด + <strong>คำเชื่อม:</strong> <span class='highlight-conn'>หรือ</span> + <strong>ประโยคย่อย 2:</strong> เธอจะพักผ่อนอยู่ที่บ้าน"
+            },
+            {
+                id: 13,
+                sentence: "เขามาสายในวันนี้ เพราะการจราจรบนถนนติดขัดมาก",
+                type: "ความรวม",
+                connector: "เพราะ (สันธานเชื่อมความเป็นเหตุเป็นผล)",
+                breakdown: "<strong>ผล (ประโยค 1):</strong> เขามาสายในวันนี้ + <strong>คำเชื่อม:</strong> <span class='highlight-conn'>เพราะ</span> + <strong>เหตุ (ประโยค 2):</strong> การจราจรบนถนนติดขัดมาก"
+            },
+            {
+                id: 14,
+                sentence: "นักเรียนตั้งใจทบทวนบทเรียน จึงสอบผ่านกันทุกคน",
+                type: "ความรวม",
+                connector: "จึง (สันธานเชื่อมความเป็นเหตุเป็นผล)",
+                breakdown: "<strong>เหตุ (ประโยค 1):</strong> นักเรียนตั้งใจทบทวนบทเรียน + <strong>คำเชื่อม:</strong> <span class='highlight-conn'>จึง</span> + <strong>ผล (ประโยค 2):</strong> (นักเรียน) สอบผ่านกันทุกคน"
+            },
+            {
+                id: 15,
+                sentence: "พ่อรดน้ำต้นไม้และแม่กวาดใบไม้อยู่หน้าบ้าน",
+                type: "ความรวม",
+                connector: "และ (สันธานเชื่อมความคล้อยตามกัน)",
+                breakdown: "<strong>ประโยคย่อย 1:</strong> พ่อรดน้ำต้นไม้ + <strong>คำเชื่อม:</strong> <span class='highlight-conn'>และ</span> + <strong>ประโยคย่อย 2:</strong> แม่กวาดใบไม้อยู่หน้าบ้าน"
+            },
+            {
+                id: 16,
+                sentence: "กว่าถั่วจะสุก งาก็ไหม้เสียแล้ว",
+                type: "ความรวม",
+                connector: "กว่า...ก็ (สันธานเชื่อมความคล้อยตามกันด้านเวลา)",
+                breakdown: "<strong>ประโยคย่อย 1:</strong> <span class='highlight-conn'>กว่า</span>ถั่วจะสุก + <strong>ประโยคย่อย 2:</strong> งา<span class='highlight-conn'>ก็</span>ไหม้เสียแล้ว"
+            },
+            {
+                id: 17,
+                sentence: "อากาศข้างนอกร้อนจัด พวกเราเลยเปิดเครื่องปรับอากาศ",
+                type: "ความรวม",
+                connector: "เลย (สันธานเชื่อมความเป็นเหตุเป็นผล)",
+                breakdown: "<strong>เหตุ (ประโยค 1):</strong> อากาศข้างนอกร้อนจัด + <strong>คำเชื่อม:</strong> <span class='highlight-conn'>เลย</span> + <strong>ผล (ประโยค 2):</strong> พวกเราเปิดเครื่องปรับอากาศ"
+            },
+            {
+                id: 18,
+                sentence: "ถึงแม้ฝนจะตกหนัก เขาก็ยังออกไปวิ่งออกกำลังกาย",
+                type: "ความรวม",
+                connector: "ถึงแม้...ก็ (สันธานเชื่อมความขัดแย้ง)",
+                breakdown: "<strong>ประโยคย่อย 1:</strong> <span class='highlight-conn'>ถึงแม้</span>ฝนจะตกหนัก + <strong>ประโยคย่อย 2:</strong> เขา<span class='highlight-conn'>ก็</span>ยังออกไปวิ่งออกกำลังกาย"
+            },
+            {
+                id: 19,
+                sentence: "พอเสียงระฆังดังขึ้น นักเรียนก็รีบเข้าแถวหน้าเสาธงทันที",
+                type: "ความรวม",
+                connector: "พอ...ก็ (สันธานเชื่อมความคล้อยตามกัน)",
+                breakdown: "<strong>ประโยคย่อย 1:</strong> <span class='highlight-conn'>พอ</span>เสียงระฆังดังขึ้น + <strong>ประโยคย่อย 2:</strong> นักเรียน<span class='highlight-conn'>ก็</span>รีบเข้าแถวหน้าเสาธงทันที"
+            },
+            {
+                id: 20,
+                sentence: "คุณอยากรับประทานก๋วยเตี๋ยวหรืออยากรับประทานข้าวมันไก่",
+                type: "ความรวม",
+                connector: "หรือ (สันธานเชื่อมความให้เลือก)",
+                breakdown: "<strong>ประโยคย่อย 1:</strong> คุณอยากรับประทานก๋วยเตี๋ยว + <strong>คำเชื่อม:</strong> <span class='highlight-conn'>หรือ</span> + <strong>ประโยคย่อย 2:</strong> (คุณ) อยากรับประทานข้าวมันไก่"
+            },
+
+            // --- ประโยคความซ้อน (10 ข้อ) ---
+            {
+                id: 21,
+                sentence: "ฉันชอบสุนัขตัวสีน้ำตาลที่กำลังวิ่งเล่นอยู่ในสวน",
+                type: "ความซ้อน",
+                connector: "ที่ (ประพันธสรรพนามเชื่อมประโยคย่อยขยายคำนาม)",
+                breakdown: "<strong>ประโยคหลัก:</strong> ฉันชอบสุนัขตัวสีน้ำตาล | <strong>ประโยคย่อย (ซ้อน):</strong> <span class='highlight-sub'>ที่กำลังวิ่งเล่นอยู่ในสวน</span> (ขยายคำนาม 'สุนัข')"
+            },
+            {
+                id: 22,
+                sentence: "คุณครูกล่าวชื่นชมนักเรียนซึ่งตั้งใจเรียนสม่ำเสมอ",
+                type: "ความซ้อน",
+                connector: "ซึ่ง (ประพันธสรรพนามเชื่อมประโยคย่อยขยายคำนาม)",
+                breakdown: "<strong>ประโยคหลัก:</strong> คุณครูกล่าวชื่นชมนักเรียน | <strong>ประโยคย่อย (ซ้อน):</strong> <span class='highlight-sub'>ซึ่งตั้งใจเรียนสม่ำเสมอ</span> (ขยายคำนาม 'นักเรียน')"
+            },
+            {
+                id: 23,
+                sentence: "เขาทำงานหามรุ่งหามค่ำจนร่างกายล้มป่วย",
+                type: "ความซ้อน",
+                connector: "จน (คำเชื่อมเชื่อมประโยคย่อยขยายคำกริยา)",
+                breakdown: "<strong>ประโยคหลัก:</strong> เขาทำงานหามรุ่งหามค่ำ | <strong>ประโยคย่อย (ซ้อน):</strong> <span class='highlight-sub'>จนร่างกายล้มป่วย</span> (ขยายกริยา 'ทำงาน')"
+            },
+            {
+                id: 24,
+                sentence: "ตำรวจจับกุมคนร้ายผู้ก่อเหตุลักทรัพย์เมื่อคืนนี้ได้แล้ว",
+                type: "ความซ้อน",
+                connector: "ผู้ (ประพันธสรรพนามเชื่อมประโยคย่อยขยายคำนาม)",
+                breakdown: "<strong>ประโยคหลัก:</strong> ตำรวจจับกุมคนร้ายได้แล้ว | <strong>ประโยคย่อย (ซ้อน):</strong> <span class='highlight-sub'>ผู้ก่อเหตุลักทรัพย์เมื่อคืนนี้</span> (ขยายคำนาม 'คนร้าย')"
+            },
+            {
+                id: 25,
+                sentence: "เพื่อนสนิทเล่าให้ฉันฟังว่าเขาจะย้ายไปเรียนต่อต่างประเทศ",
+                type: "ความซ้อน",
+                connector: "ว่า (คำเชื่อมเชื่อมประโยคย่อยทำหน้าที่เป็นกรรม)",
+                breakdown: "<strong>ประโยคหลัก:</strong> เพื่อนสนิทเล่าให้ฉันฟัง | <strong>ประโยคย่อย (ซ้อน):</strong> <span class='highlight-sub'>ว่าเขาจะย้ายไปเรียนต่อต่างประเทศ</span>"
+            },
+            {
+                id: 26,
+                sentence: "ความซื่อสัตย์เป็นคุณสมบัติอันพึงปรารถนาของทุกคน",
+                type: "ความซ้อน",
+                connector: "อัน (ประพันธสรรพนามเชื่อมประโยคย่อยขยายคำนาม)",
+                breakdown: "<strong>ประโยคหลัก:</strong> ความซื่อสัตย์เป็นคุณสมบัติของทุกคน | <strong>ประโยคย่อย (ซ้อน):</strong> <span class='highlight-sub'>อันพึงปรารถนา</span> (ขยายคำนาม 'คุณสมบัติ')"
+            },
+            {
+                id: 27,
+                sentence: "คุณแม่เตือนลูกชายให้ระมัดระวังตัวเวลาข้ามถนน",
+                type: "ความซ้อน",
+                connector: "ให้ (คำเชื่อมเชื่อมประโยคย่อยขยายกริยา)",
+                breakdown: "<strong>ประโยคหลัก:</strong> คุณแม่เตือนลูกชาย | <strong>ประโยคย่อย (ซ้อน):</strong> <span class='highlight-sub'>ให้ระมัดระวังตัวเวลาข้ามถนน</span> (ขยายกริยา 'เตือน')"
+            },
+            {
+                id: 28,
+                sentence: "คนเราควรกตัญญูต่อผู้มีพระคุณที่เลี้ยงดูเรามาตั้งแต่เล็ก",
+                type: "ความซ้อน",
+                connector: "ที่ (ประพันธสรรพนามเชื่อมประโยคย่อยขยายคำนาม)",
+                breakdown: "<strong>ประโยคหลัก:</strong> คนเราควรกตัญญูต่อผู้มีพระคุณ | <strong>ประโยคย่อย (ซ้อน):</strong> <span class='highlight-sub'>ที่เลี้ยงดูเรามาตั้งแต่เล็ก</span> (ขยาย 'ผู้มีพระคุณ')"
+            },
+            {
+                id: 29,
+                sentence: "น้องหัวเราะเสียงดังเมื่อเห็นตัวตลกแสดงกายกรรม",
+                type: "ความซ้อน",
+                connector: "เมื่อ (คำเชื่อมบอกเวลาเชื่อมประโยคย่อยขยายกริยา)",
+                breakdown: "<strong>ประโยคหลัก:</strong> น้องหัวเราะเสียงดัง | <strong>ประโยคย่อย (ซ้อน):</strong> <span class='highlight-sub'>เมื่อเห็นตัวตลกแสดงกายกรรม</span> (ขยายกริยา 'หัวเราะ')"
+            },
+            {
+                id: 30,
+                sentence: "หนังสือเล่มที่วางอยู่บนโต๊ะเป็นของหัวหน้าห้อง",
+                type: "ความซ้อน",
+                connector: "ที่ (ประพันธสรรพนามแทรกกลางประโยคหลัก)",
+                breakdown: "<strong>ประโยคหลัก:</strong> หนังสือเล่ม(นั้น)เป็นของหัวหน้าห้อง | <strong>ประโยคย่อย (ซ้อนตรงกลาง):</strong> <span class='highlight-sub'>ที่วางอยู่บนโต๊ะ</span> (ขยายคำนาม 'หนังสือ')"
+            }
+        ];
+
+        /**
+         * 2. สถานะของเกม (Game State) และระบบสุ่มไม่ซ้ำ (Non-Repeating Pool)
+         */
+        let usedQuestionIds = new Set(); // เก็บ ID ข้อสอบที่เคยออกไปแล้ว ข้ามรอบได้ไม่ซ้ำ!
+        let soundEnabled = true;
+
+        let gameState = {
+            mode: 'choice',        // 'choice' | 'match' | 'mixed'
+            totalRounds: 5,        // จำนวนข้อต่อรอบ
+            currentRoundIndex: 0,  // ข้อปัจจุบัน (0-based)
+            score: 0,              // คะแนนที่ได้
+            maxPossibleScore: 0,   // คะแนนเต็มที่เป็นไปได้ในรอบนี้
+            playerName: 'ผู้ท้าชิง',
+            roundPlan: [],         // แผนการเล่นแต่ละข้อในรอบนี้ (เก็บชนิดโหมด และข้อมูลโจทย์)
+            history: []            // ประวัติการตอบในรอบนี้สำหรับหน้าสรุป
+        };
+
+        // สถานะเฉพาะสำหรับโหมดโยงเส้น (Line Matching State)
+        let matchState = {
+            items: [],             // 3 โจทย์ในข้อนี้
+            rightCategories: [],   // 3 ตัวเลือกฝั่งขวา (สลับลำดับ)
+            selectedLeftIdx: null, // index ฝั่งซ้ายที่กำลังเลือก
+            connections: {},       // { leftIdx: rightIdx }
+            colors: ['#4F46E5', '#DB2777', '#059669'] // สีเส้นแต่ละคู่
+        };
+
+        /**
+         * 3. ระบบเสียงสังเคราะห์ด้วย Tone.js (ไม่ต้องใช้ไฟล์เสียงภายนอก)
+         */
+        let synth = null;
+        function initAudio() {
+            if (!synth && typeof Tone !== 'undefined') {
+                synth = new Tone.PolySynth(Tone.Synth).toDestination();
+                synth.volume.value = -8;
+            }
+        }
+
+        function playSound(type) {
+            if (!soundEnabled) return;
+            try {
+                initAudio();
+                if (Tone.context.state !== 'running') {
+                    Tone.start();
+                }
+                const now = Tone.now();
+                if (type === 'click') {
+                    synth.triggerAttackRelease("C5", "32n", now);
+                } else if (type === 'connect') {
+                    synth.triggerAttackRelease(["E5", "G5"], "16n", now);
+                } else if (type === 'correct') {
+                    synth.triggerAttackRelease(["C5", "E5", "G5", "C6"], "16n", now);
+                } else if (type === 'wrong') {
+                    synth.triggerAttackRelease(["E4", "Eb4"], "8n", now);
+                } else if (type === 'win') {
+                    synth.triggerAttackRelease(["C5", "E5", "G5", "B5", "C6"], "8n", now);
+                }
+            } catch (e) {
+                // ข้ามหากเบราว์เซอร์บล็อกเสียงอัตโนมัติ
+            }
+        }
+
+        function toggleSound() {
+            soundEnabled = !soundEnabled;
+            const icon = document.getElementById('sound-icon');
+            icon.className = soundEnabled ? 'fa-solid fa-volume-high' : 'fa-solid fa-volume-xmark text-slate-400';
+            if (soundEnabled) playSound('click');
+        }
+
+        /**
+         * 4. ฟังก์ชันจัดการคลังคำถามแบบสุ่มไม่ซ้ำ (Shuffle Without Replacement)
+         */
+        function getUnusedQuestions(count, requireDistinctTypes = false) {
+            // กรองเฉพาะข้อที่ยังไม่เคยถูกใช้
+            let available = QUESTION_BANK.filter(q => !usedQuestionIds.has(q.id));
+
+            // หากข้อสอบที่เหลือไม่พอ ให้รีเซ็ตคลังข้อสอบที่เคยเล่นไปแล้ว (ยกเว้นข้อที่กำลังจะหยิบ)
+            if (available.length < count) {
+                usedQuestionIds.clear();
+                available = [...QUESTION_BANK];
+            }
+
+            // สับไพ่ด้วยอัลกอริทึม Fisher-Yates
+            for (let i = available.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [available[i], available[j]] = [available[j], available[i]];
+            }
+
+            let selected = [];
+
+            if (requireDistinctTypes && count === 3) {
+                // สำหรับโหมดโยงเส้น พยายามเลือกให้ได้ครบทั้ง 3 ชนิด (ความเดียว, ความรวม, ความซ้อน) เพื่อความสนุกและไม่กำกวม
+                const types = ['ความเดียว', 'ความรวม', 'ความซ้อน'];
+                for (const t of types) {
+                    const foundIdx = available.findIndex(q => q.type === t && !selected.includes(q));
+                    if (foundIdx !== -1) {
+                        selected.push(available[foundIdx]);
+                    }
+                }
+                // เติมให้ครบ 3 หากชนิดใดหมดชั่วคราว
+                for (const q of available) {
+                    if (selected.length >= 3) break;
+                    if (!selected.includes(q)) selected.push(q);
+                }
+            } else {
+                selected = available.slice(0, count);
+            }
+
+            // บันทึก ID ข้อสอบที่ถูกเลือกเข้าสู่รายการ "ใช้แล้ว"
+            selected.forEach(q => usedQuestionIds.add(q.id));
+            updatePoolCounterUI();
+            return selected;
+        }
+
+        function updatePoolCounterUI() {
+            const remaining = QUESTION_BANK.length - usedQuestionIds.size;
+            const el = document.getElementById('pool-counter');
+            if (el) el.textContent = remaining === 0 ? QUESTION_BANK.length : remaining;
+        }
+
+        /**
+         * 5. การตั้งค่าหน้าแรก (Home Screen Controls)
+         */
+        function selectRounds(num) {
+            playSound('click');
+            gameState.totalRounds = num;
+            document.querySelectorAll('.round-btn').forEach(btn => {
+                const btnRounds = parseInt(btn.getAttribute('data-rounds'));
+                if (btnRounds === num) {
+                    btn.className = 'round-btn py-2.5 rounded-xl font-bold text-sm border-2 border-indigo-600 bg-indigo-600 text-white transition';
+                } else {
+                    btn.className = 'round-btn py-2.5 rounded-xl font-bold text-sm border-2 border-slate-200 bg-white text-slate-600 hover:border-indigo-300 transition';
+                }
+            });
+        }
+
+        function selectMode(mode) {
+            playSound('click');
+            gameState.mode = mode;
+            const modes = ['choice', 'match', 'mixed'];
+            const colors = { choice: 'indigo', match: 'purple', mixed: 'pink' };
+
+            modes.forEach(m => {
+                const card = document.getElementById(`mode-card-${m}`);
+                const check = card.querySelector('.mode-check');
+                const c = colors[m];
+                if (m === mode) {
+                    card.className = `mode-card p-4 rounded-2xl border-2 border-${c}-600 bg-${c}-50/70 text-left transition relative group shadow-sm`;
+                    check.classList.remove('hidden');
+                } else {
+                    card.className = `mode-card p-4 rounded-2xl border-2 border-slate-200 bg-white hover:border-${c}-300 text-left transition relative group`;
+                    check.classList.add('hidden');
+                }
+            });
+        }
+
+        function switchScreen(screenId) {
+            ['screen-home', 'screen-game', 'screen-summary'].forEach(id => {
+                document.getElementById(id).classList.add('hidden');
+            });
+            document.getElementById(screenId).classList.remove('hidden');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function goHome() {
+            playSound('click');
+            switchScreen('screen-home');
+        }
+
+        function toggleGuideModal(show) {
+            playSound('click');
+            const modal = document.getElementById('guide-modal');
+            if (show) {
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+            } else {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+            }
+        }
+
+        function confirmQuitGame() {
+            playSound('click');
+            const modal = document.getElementById('confirm-modal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function closeConfirmModal() {
+            playSound('click');
+            const modal = document.getElementById('confirm-modal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        function executeQuitGame() {
+            closeConfirmModal();
+            goHome();
+        }
+
+        /**
+         * 6. เริ่มเกมและการสร้างแผนการเล่นแต่ละข้อ
+         */
+        function startGame() {
+            playSound('click');
+            const nameInput = document.getElementById('player-name').value.trim();
+            gameState.playerName = nameInput || 'ผู้ท้าชิง';
+            gameState.currentRoundIndex = 0;
+            gameState.score = 0;
+            gameState.maxPossibleScore = 0;
+            gameState.history = [];
+            gameState.roundPlan = [];
+
+            // สร้างแผนการเล่นตามจำนวนข้อและโหมดที่เลือก
+            for (let i = 0; i < gameState.totalRounds; i++) {
+                let stepType = gameState.mode;
+                if (gameState.mode === 'mixed') {
+                    // สลับโหมด: ข้อคี่เป็นเลือกคำตอบ ข้อคู่เป็นโยงเส้น
+                    stepType = (i % 2 === 0) ? 'choice' : 'match';
+                }
+
+                if (stepType === 'choice') {
+                    const q = getUnusedQuestions(1, false)[0];
+                    gameState.roundPlan.push({ type: 'choice', questions: [q] });
+                    gameState.maxPossibleScore += 1;
+                } else {
+                    const qs = getUnusedQuestions(3, true);
+                    gameState.roundPlan.push({ type: 'match', questions: qs });
+                    gameState.maxPossibleScore += 3;
+                }
+            }
+
+            document.getElementById('display-player-name').textContent = gameState.playerName;
+            document.getElementById('total-q-num').textContent = gameState.totalRounds;
+            document.getElementById('current-score').textContent = '0';
+
+            switchScreen('screen-game');
+            renderCurrentRound();
+        }
+
+        function renderCurrentRound() {
+            const idx = gameState.currentRoundIndex;
+            const total = gameState.totalRounds;
+            const currentStep = gameState.roundPlan[idx];
+
+            // อัปเดตแถบสถานะด้านบน
+            document.getElementById('current-q-num').textContent = idx + 1;
+            const progressPercent = ((idx) / total) * 100;
+            document.getElementById('progress-bar').style.width = `${Math.max(10, progressPercent)}%`;
+
+            // ซ่อนกล่องเฉลยก่อนเริ่มข้อใหม่
+            document.getElementById('feedback-panel').classList.add('hidden');
+
+            if (currentStep.type === 'choice') {
+                document.getElementById('view-match').classList.add('hidden');
+                document.getElementById('view-choice').classList.remove('hidden');
+                setupChoiceQuestion(currentStep.questions[0]);
+            } else {
+                document.getElementById('view-choice').classList.add('hidden');
+                document.getElementById('view-match').classList.remove('hidden');
+                setupMatchQuestion(currentStep.questions);
+            }
+        }
+
+        /**
+         * 7. ลอจิกโหมดที่ 1: เลือกคำตอบ (Multiple Choice)
+         */
+        function setupChoiceQuestion(question) {
+            document.getElementById('choice-sentence').textContent = `"${question.sentence}"`;
+
+            // รีเซ็ตปุ่มตัวเลือกทั้งหมด
+            document.querySelectorAll('.choice-btn').forEach(btn => {
+                btn.disabled = false;
+                btn.className = 'choice-btn btn-3d bg-white hover:bg-indigo-50 border-2 border-slate-200 hover:border-indigo-400 rounded-2xl p-4 sm:p-5 text-center transition group';
+            });
+        }
+
+        function submitChoiceAnswer(selectedType) {
+            const currentStep = gameState.roundPlan[gameState.currentRoundIndex];
+            const question = currentStep.questions[0];
+            const isCorrect = (selectedType === question.type);
+
+            if (isCorrect) {
+                gameState.score += 1;
+                playSound('correct');
+                triggerMiniConfetti();
+            } else {
+                playSound('wrong');
+            }
+
+            document.getElementById('current-score').textContent = gameState.score;
+
+            // ล็อกปุ่มและเปลี่ยนสีตามถูก/ผิด
+            document.querySelectorAll('.choice-btn').forEach(btn => {
+                btn.disabled = true;
+                const btnType = btn.getAttribute('data-type');
+                if (btnType === question.type) {
+                    btn.className = 'choice-btn bg-emerald-50 border-2 border-emerald-500 rounded-2xl p-4 sm:p-5 text-center shadow-md';
+                } else if (btnType === selectedType && !isCorrect) {
+                    btn.className = 'choice-btn bg-rose-50 border-2 border-rose-500 rounded-2xl p-4 sm:p-5 text-center animate-shake';
+                } else {
+                    btn.className = 'choice-btn bg-slate-50 border-2 border-slate-200 rounded-2xl p-4 sm:p-5 text-center opacity-50';
+                }
+            });
+
+            // บันทึกประวัติ
+            gameState.history.push({
+                sentence: question.sentence,
+                userAnswer: `ประโยค${selectedType}`,
+                correctAnswer: `ประโยค${question.type}`,
+                isCorrect: isCorrect,
+                connector: question.connector
+            });
+
+            // แสดงกล่องเฉลยและเหตุผล
+            showFeedbackPanel(
+                isCorrect,
+                isCorrect ? 'ถูกต้อง! เก่งมากเลย' : `ยังไม่ถูกนะ! ข้อนี้คือ "ประโยค${question.type}"`,
+                isCorrect ? 'คุณจับจุดโครงสร้างของประโยคนี้ได้แม่นยำ' : 'ลองดูวิเคราะห์โครงสร้างด้านล่างเพื่อจับจุดสังเกตกันเลย',
+                [{ question, isCorrect, userChoice: `ประโยค${selectedType}` }]
+            );
+        }
+
+        /**
+         * 8. ลอจิกโหมดที่ 2: โยงเส้นจับคู่ (Line Matching with SVG Overlay)
+         */
+        function setupMatchQuestion(questions) {
+            // สลับลำดับฝั่งขวาไม่ให้ตรงกับฝั่งซ้ายเสมอไป
+            const categories = questions.map((q, idx) => ({
+                label: `ประโยค${q.type}`,
+                typeValue: q.type,
+                origIdx: idx
+            }));
+
+            // สับไพ่ฝั่งขวา
+            for (let i = categories.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [categories[i], categories[j]] = [categories[j], categories[i]];
+            }
+
+            matchState = {
+                items: questions,
+                rightCategories: categories,
+                selectedLeftIdx: null,
+                connections: {}, // leftIdx -> rightIdx
+                colors: ['#4F46E5', '#DB2777', '#059669'],
+                submitted: false
+            };
+
+            document.getElementById('match-submit-container').classList.remove('hidden');
+            document.getElementById('clear-lines-btn').classList.remove('hidden');
+            renderMatchBoard();
+        }
+
+        function renderMatchBoard() {
+            const leftCol = document.getElementById('match-left-col');
+            const rightCol = document.getElementById('match-right-col');
+            leftCol.innerHTML = '';
+            rightCol.innerHTML = '';
+
+            // สร้างการ์ดประโยคฝั่งซ้าย
+            matchState.items.forEach((q, idx) => {
+                const isSelected = matchState.selectedLeftIdx === idx;
+                const isConnected = matchState.connections[idx] !== undefined;
+                const lineColor = matchState.colors[idx];
+
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.id = `left-node-${idx}`;
+                btn.disabled = matchState.submitted;
+                btn.onclick = () => handleLeftNodeClick(idx);
+
+                let borderStyle = 'border-slate-200 bg-white hover:border-indigo-300';
+                if (isSelected) {
+                    borderStyle = 'border-indigo-600 bg-indigo-50 ring-4 ring-indigo-200 scale-[1.02]';
+                } else if (isConnected) {
+                    borderStyle = 'bg-slate-50 font-medium';
+                }
+
+                btn.className = `match-node relative text-left p-3.5 sm:p-4 rounded-2xl border-2 shadow-sm flex items-center justify-between gap-2 ${borderStyle}`;
+                if (isConnected && !isSelected) {
+                    btn.style.borderColor = lineColor;
+                }
+
+                btn.innerHTML = `
+                    <span class="text-xs sm:text-sm font-sarabun font-semibold text-slate-800 leading-snug">${idx + 1}. ${q.sentence}</span>
+                    <span class="w-4 h-4 rounded-full shrink-0 border-2 flex items-center justify-center" 
+                          style="border-color: ${lineColor}; background-color: ${isConnected || isSelected ? lineColor : '#fff'}">
+                    </span>
+                `;
+                leftCol.appendChild(btn);
+            });
+
+            // สร้างการ์ดชนิดประโยคฝั่งขวา
+            matchState.rightCategories.forEach((cat, rIdx) => {
+                // ตรวจสอบว่ามีฝั่งซ้ายไหนโยงมาหา rIdx นี้ไหม
+                const connectedLeftIdxStr = Object.keys(matchState.connections).find(
+                    lKey => matchState.connections[lKey] === rIdx
+                );
+                const hasConnection = connectedLeftIdxStr !== undefined;
+                const lineColor = hasConnection ? matchState.colors[parseInt(connectedLeftIdxStr)] : '#94A3B8';
+
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.id = `right-node-${rIdx}`;
+                btn.disabled = matchState.submitted;
+                btn.onclick = () => handleRightNodeClick(rIdx);
+
+                let styleClass = 'border-slate-200 bg-white hover:border-purple-400';
+                if (matchState.selectedLeftIdx !== null && !matchState.submitted) {
+                    styleClass = 'border-purple-300 bg-purple-50/40 hover:bg-purple-100 cursor-pointer';
+                }
+
+                btn.className = `match-node relative text-left p-3.5 sm:p-4 rounded-2xl border-2 shadow-sm flex items-center gap-2.5 min-h-[68px] ${styleClass}`;
+                if (hasConnection) {
+                    btn.style.borderColor = lineColor;
+                }
+
+                btn.innerHTML = `
+                    <span class="w-4 h-4 rounded-full shrink-0 border-2" 
+                          style="border-color: ${lineColor}; background-color: ${hasConnection ? lineColor : '#fff'}">
+                    </span>
+                    <span class="text-xs sm:text-sm font-bold text-slate-800">${cat.label}</span>
+                `;
+                rightCol.appendChild(btn);
+            });
+
+            // อัปเดตปุ่มตรวจคำตอบ
+            const count = Object.keys(matchState.connections).length;
+            document.getElementById('connected-count').textContent = count;
+            document.getElementById('btn-check-match').disabled = (count < 3);
+
+            // วาดเส้น SVG ใหม่
+            requestAnimationFrame(drawMatchLines);
+        }
+
+        function handleLeftNodeClick(leftIdx) {
+            if (matchState.submitted) return;
+            playSound('click');
+
+            // หากคลิกซ้ำที่ตัวเดิม ให้ยกเลิกการเลือก
+            if (matchState.selectedLeftIdx === leftIdx) {
+                matchState.selectedLeftIdx = null;
+            } else {
+                matchState.selectedLeftIdx = leftIdx;
+            }
+            renderMatchBoard();
+        }
+
+        function handleRightNodeClick(rightIdx) {
+            if (matchState.submitted) return;
+
+            // หากยังไม่ได้เลือกฝั่งซ้าย ให้เลือกฝั่งซ้ายตัวแรกที่ว่างให้อัตโนมัติเพื่อความลื่นไหล
+            if (matchState.selectedLeftIdx === null) {
+                const firstUnconnected = [0, 1, 2].find(i => matchState.connections[i] === undefined);
+                if (firstUnconnected !== undefined) {
+                    matchState.selectedLeftIdx = firstUnconnected;
+                } else {
+                    return;
+                }
+            }
+
+            const leftIdx = matchState.selectedLeftIdx;
+
+            // ลบเส้นเดิมหากฝั่งขวาตัวนี้เคยถูกโยงจากข้ออื่นมาก่อน (1 ต่อ 1)
+            Object.keys(matchState.connections).forEach(k => {
+                if (matchState.connections[k] === rightIdx) {
+                    delete matchState.connections[k];
+                }
+            });
+
+            // บันทึกการเชื่อมต่อใหม่
+            matchState.connections[leftIdx] = rightIdx;
+            matchState.selectedLeftIdx = null;
+            playSound('connect');
+            renderMatchBoard();
+        }
+
+        function clearAllLines() {
+            if (matchState.submitted) return;
+            playSound('click');
+            matchState.connections = {};
+            matchState.selectedLeftIdx = null;
+            renderMatchBoard();
+        }
+
+        function drawMatchLines() {
+            const svg = document.getElementById('match-svg');
+            const board = document.getElementById('match-board');
+            if (!svg || !board) return;
+
+            svg.innerHTML = '';
+            const boardRect = board.getBoundingClientRect();
+
+            Object.entries(matchState.connections).forEach(([leftIdxStr, rightIdx]) => {
+                const leftIdx = parseInt(leftIdxStr);
+                const leftEl = document.getElementById(`left-node-${leftIdx}`);
+                const rightEl = document.getElementById(`right-node-${rightIdx}`);
+                if (!leftEl || !rightEl) return;
+
+                const lRect = leftEl.getBoundingClientRect();
+                const rRect = rightEl.getBoundingClientRect();
+
+                // จุดกึ่งกลางขอบขวาของกล่องซ้าย -> จุดกึ่งกลางขอบซ้ายของกล่องขวา
+                const x1 = lRect.right - boardRect.left - 8;
+                const y1 = lRect.top + (lRect.height / 2) - boardRect.top;
+                const x2 = rRect.left - boardRect.left + 8;
+                const y2 = rRect.top + (rRect.height / 2) - boardRect.top;
+
+                // สร้างเส้นโค้ง Bezier สวยงาม
+                const ctrlOffset = (x2 - x1) * 0.45;
+                const pathData = `M ${x1} ${y1} C ${x1 + ctrlOffset} ${y1}, ${x2 - ctrlOffset} ${y2}, ${x2} ${y2}`;
+
+                let strokeColor = matchState.colors[leftIdx];
+                // หากตรวจคำตอบแล้ว ให้เปลี่ยนสีเส้นเป็นเขียว (ถูก) หรือแดง (ผิด)
+                if (matchState.submitted) {
+                    const q = matchState.items[leftIdx];
+                    const chosenType = matchState.rightCategories[rightIdx].typeValue;
+                    strokeColor = (q.type === chosenType) ? '#10B981' : '#F43F5E';
+                }
+
+                const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                path.setAttribute('d', pathData);
+                path.setAttribute('fill', 'none');
+                path.setAttribute('stroke', strokeColor);
+                path.setAttribute('stroke-width', '4.5');
+                path.setAttribute('stroke-linecap', 'round');
+                if (matchState.submitted) {
+                    const q = matchState.items[leftIdx];
+                    const chosenType = matchState.rightCategories[rightIdx].typeValue;
+                    if (q.type !== chosenType) {
+                        path.setAttribute('stroke-dasharray', '6,6');
+                    }
+                }
+                svg.appendChild(path);
+            });
+        }
+
+        // วาดเส้นใหม่เมื่อหน้าจอเปลี่ยนขนาด (Responsive Canvas/SVG)
+        window.addEventListener('resize', () => {
+            if (!document.getElementById('view-match').classList.contains('hidden')) {
+                drawMatchLines();
+            }
+        });
+
+        function submitMatchAnswers() {
+            if (Object.keys(matchState.connections).length < 3) return;
+            matchState.submitted = true;
+
+            document.getElementById('match-submit-container').classList.add('hidden');
+            document.getElementById('clear-lines-btn').classList.add('hidden');
+
+            let correctCount = 0;
+            const breakdownItems = [];
+
+            matchState.items.forEach((q, leftIdx) => {
+                const rightIdx = matchState.connections[leftIdx];
+                const chosenCat = matchState.rightCategories[rightIdx];
+                const isCorrect = (q.type === chosenCat.typeValue);
+
+                if (isCorrect) correctCount++;
+
+                // ไฮไลต์กล่องฝั่งซ้ายตามผลลัพธ์
+                const leftEl = document.getElementById(`left-node-${leftIdx}`);
+                if (leftEl) {
+                    leftEl.disabled = true;
+                    leftEl.classList.add(isCorrect ? 'bg-emerald-50' : 'bg-rose-50');
+                    leftEl.style.borderColor = isCorrect ? '#10B981' : '#F43F5E';
+                }
+
+                gameState.history.push({
+                    sentence: q.sentence,
+                    userAnswer: chosenCat.label,
+                    correctAnswer: `ประโยค${q.type}`,
+                    isCorrect: isCorrect,
+                    connector: q.connector
+                });
+
+                breakdownItems.push({
+                    question: q,
+                    isCorrect: isCorrect,
+                    userChoice: chosenCat.label
+                });
+            });
+
+            // ปิดการกดปุ่มฝั่งขวา
+            matchState.rightCategories.forEach((_, rIdx) => {
+                const rightEl = document.getElementById(`right-node-${rIdx}`);
+                if (rightEl) rightEl.disabled = true;
+            });
+
+            drawMatchLines();
+
+            gameState.score += correctCount;
+            document.getElementById('current-score').textContent = gameState.score;
+
+            const allCorrect = (correctCount === 3);
+            if (allCorrect) {
+                playSound('correct');
+                triggerMiniConfetti();
+            } else if (correctCount > 0) {
+                playSound('connect');
+            } else {
+                playSound('wrong');
+            }
+
+            showFeedbackPanel(
+                allCorrect,
+                allCorrect ? 'สุดยอด! โยงเส้นถูกต้องครบทั้ง 3 ข้อ' : `โยงเส้นถูกต้อง ${correctCount} จาก 3 ข้อ`,
+                'ตรวจสอบคำอธิบายและส่วนขยายของแต่ละประโยคด้านล่างได้เลย',
+                breakdownItems
+            );
+        }
+
+        /**
+         * 9. แสดงกล่องเฉลยพร้อมวิเคราะห์โครงสร้าง (Feedback & Explanation)
+         */
+        function showFeedbackPanel(isSuccess, title, subtitle, breakdownItems) {
+            const panel = document.getElementById('feedback-panel');
+            const banner = document.getElementById('feedback-banner');
+            const iconBox = document.getElementById('feedback-icon-box');
+            const icon = document.getElementById('feedback-icon');
+
+            panel.classList.remove('hidden');
+
+            if (isSuccess) {
+                panel.className = 'animate-pop-in bg-white rounded-3xl shadow-xl border-2 border-emerald-400 p-6 sm:p-8 mb-6';
+                banner.className = 'flex items-center gap-4 p-4 rounded-2xl mb-5 bg-emerald-50 text-emerald-900';
+                iconBox.className = 'w-12 h-12 rounded-2xl flex items-center justify-center text-2xl shrink-0 bg-emerald-500 text-white';
+                icon.className = 'fa-solid fa-check';
+            } else {
+                panel.className = 'animate-pop-in bg-white rounded-3xl shadow-xl border-2 border-amber-400 p-6 sm:p-8 mb-6';
+                banner.className = 'flex items-center gap-4 p-4 rounded-2xl mb-5 bg-amber-50 text-amber-900';
+                iconBox.className = 'w-12 h-12 rounded-2xl flex items-center justify-center text-2xl shrink-0 bg-amber-500 text-white';
+                icon.className = 'fa-solid fa-lightbulb';
+            }
+
+            document.getElementById('feedback-title').textContent = title;
+            document.getElementById('feedback-subtitle').textContent = subtitle;
+
+            // สร้างรายการอธิบายเหตุผลทีละประโยค
+            const listEl = document.getElementById('explanation-list');
+            listEl.innerHTML = '';
+
+            breakdownItems.forEach((item, index) => {
+                const q = item.question;
+                const badgeColors = {
+                    'ความเดียว': 'bg-sky-100 text-sky-800 border-sky-200',
+                    'ความรวม': 'bg-amber-100 text-amber-800 border-amber-200',
+                    'ความซ้อน': 'bg-purple-100 text-purple-800 border-purple-200'
+                };
+
+                const card = document.createElement('div');
+                card.className = `p-4 rounded-2xl border ${item.isCorrect ? 'bg-slate-50 border-slate-200' : 'bg-rose-50/40 border-rose-200'}`;
+
+                // จัดรูปแบบไฮไลต์ในคำอธิบาย
+                const formattedBreakdown = q.breakdown
+                    .replace(/highlight-conn/g, 'bg-amber-200 text-amber-950 px-1.5 py-0.5 rounded font-bold')
+                    .replace(/highlight-sub/g, 'bg-purple-200 text-purple-950 px-1.5 py-0.5 rounded font-bold');
+
+                card.innerHTML = `
+                    <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
+                        <div class="flex items-center gap-2">
+                            <span class="w-6 h-6 rounded-full text-xs font-bold flex items-center justify-center ${item.isCorrect ? 'bg-emerald-500 text-white' : 'bg-rose-500 text-white'}">
+                                <i class="fa-solid ${item.isCorrect ? 'fa-check' : 'fa-xmark'}"></i>
+                            </span>
+                            <span class="font-bold text-slate-800 text-sm sm:text-base">"${q.sentence}"</span>
+                        </div>
+                        <span class="text-xs font-bold px-3 py-1 rounded-full border ${badgeColors[q.type]}">
+                            เฉลย: ประโยค${q.type}
+                        </span>
+                    </div>
+                    ${!item.isCorrect ? `<p class="text-xs text-rose-600 font-semibold mb-1.5"><i class="fa-solid fa-circle-exclamation mr-1"></i>คำตอบที่คุณเลือก: ${item.userChoice}</p>` : ''}
+                    <div class="text-xs sm:text-sm text-slate-700 font-sarabun bg-white p-3 rounded-xl border border-slate-200/70 space-y-1">
+                        <div><strong><i class="fa-solid fa-link text-indigo-500 mr-1"></i>ตัวเชื่อม / จุดสังเกต:</strong> ${q.connector}</div>
+                        <div><strong><i class="fa-solid fa-magnifying-glass text-purple-500 mr-1"></i>วิเคราะห์โครงสร้าง:</strong> ${formattedBreakdown}</div>
+                    </div>
+                `;
+                listEl.appendChild(card);
+            });
+
+            // เปลี่ยนข้อความปุ่มถัดไปหากเป็นข้อสุดท้ายแล้ว
+            const isLast = (gameState.currentRoundIndex >= gameState.totalRounds - 1);
+            document.getElementById('next-btn-text').textContent = isLast ? 'ดูสรุปคะแนน' : 'ข้อต่อไป';
+
+            // เลื่อนหน้าจอลงมาให้เห็นกล่องเฉลยชัดเจน
+            setTimeout(() => {
+                panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }, 100);
+        }
+
+        function nextQuestion() {
+            playSound('click');
+            gameState.currentRoundIndex++;
+
+            if (gameState.currentRoundIndex < gameState.totalRounds) {
+                renderCurrentRound();
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            } else {
+                showSummaryScreen();
+            }
+        }
+
+        /**
+         * 10. หน้าสรุปผลและปุ่มส่งต่อให้เพื่อนเล่น
+         */
+        function showSummaryScreen() {
+            document.getElementById('progress-bar').style.width = '100%';
+            switchScreen('screen-summary');
+
+            const score = gameState.score;
+            const max = gameState.maxPossibleScore;
+            const accuracy = Math.round((score / max) * 100);
+
+            document.getElementById('summary-player-name').textContent = gameState.playerName;
+            document.getElementById('summary-score').textContent = score;
+            document.getElementById('summary-max-score').textContent = max;
+            document.getElementById('summary-accuracy').textContent = accuracy;
+
+            const remaining = QUESTION_BANK.length - usedQuestionIds.size;
+            document.getElementById('summary-remaining-pool').textContent = remaining === 0 ? QUESTION_BANK.length : remaining;
+
+            // จัดอันดับฉายาตามความแม่นยำ
+            let rankTitle = 'ปรมาจารย์ภาษาไทยระดับเทพ!';
+            let rankDesc = 'สุดยอด! แยกแยะโครงสร้างประโยคได้แม่นยำไร้ที่ติ พร้อมท้าชนทุกคน';
+            if (accuracy === 100) {
+                playSound('win');
+                triggerBigConfetti();
+            } else if (accuracy >= 75) {
+                rankTitle = 'ยอดนักปราชญ์ภาษาไทย!';
+                rankDesc = 'เก่งมาก! เข้าใจหลักการแยกประโยคความเดียว รวม และซ้อนเป็นอย่างดี';
+                playSound('correct');
+            } else if (accuracy >= 50) {
+                rankTitle = 'เซียนภาษาไทยฝึกหัด!';
+                rankDesc = 'ทำได้ดีเลย ลองสังเกตคำสันธานและคำเชื่อมอีกนิด รับรองเต็มร้อยแน่นอน';
+                playSound('connect');
+            } else {
+                rankTitle = 'นักสำรวจประโยคมือใหม่!';
+                rankDesc = 'ไม่เป็นไรนะ! อ่านทริคคำเชื่อมด้านบนแล้วลองเล่นอีกรอบดูสิ';
+            }
+
+            document.getElementById('summary-rank-title').textContent = rankTitle;
+            document.getElementById('summary-rank-desc').textContent = rankDesc;
+
+            // แสดงรายการทบทวนทุกประโยคที่เล่นในรอบนี้
+            const reviewList = document.getElementById('summary-review-list');
+            reviewList.innerHTML = '';
+
+            gameState.history.forEach((h, i) => {
+                const row = document.createElement('div');
+                row.className = `p-3 rounded-xl border flex items-start justify-between gap-3 text-xs sm:text-sm ${h.isCorrect ? 'bg-emerald-50/50 border-emerald-200' : 'bg-rose-50/50 border-rose-200'}`;
+                row.innerHTML = `
+                    <div class="font-sarabun">
+                        <span class="font-bold text-slate-800">${i + 1}. ${h.sentence}</span>
+                        <div class="text-xs text-slate-500 mt-0.5">
+                            เฉลย: <strong class="text-indigo-700">${h.correctAnswer}</strong> 
+                            ${!h.isCorrect ? `• <span class="text-rose-600">คุณตอบ: ${h.userAnswer}</span>` : ''}
+                        </div>
+                    </div>
+                    <span class="shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-white text-xs ${h.isCorrect ? 'bg-emerald-500' : 'bg-rose-500'}">
+                        <i class="fa-solid ${h.isCorrect ? 'fa-check' : 'fa-xmark'}"></i>
+                    </span>
+                `;
+                reviewList.appendChild(row);
+            });
+        }
+
+        function passToFriend() {
+            playSound('click');
+            // สลับชื่อผู้เล่นให้เพื่อนกรอกใหม่ได้ง่ายๆ และเริ่มเกมใหม่ทันทีโดยใช้โจทย์ชุดใหม่ที่ไม่ซ้ำ
+            const currentName = document.getElementById('player-name').value.trim();
+            document.getElementById('player-name').value = currentName ? `${currentName} (เพื่อน)` : 'เพื่อนผู้ท้าชิง';
+            startGame();
+        }
+
+        /**
+         * 11. เอฟเฟกต์พลุกระดาษ (Confetti)
+         */
+        function triggerMiniConfetti() {
+            if (typeof confetti === 'function') {
+                confetti({
+                    particleCount: 35,
+                    spread: 55,
+                    origin: { y: 0.7 }
+                });
+            }
+        }
+
+        function triggerBigConfetti() {
+            if (typeof confetti === 'function') {
+                confetti({
+                    particleCount: 100,
+                    spread: 80,
+                    origin: { y: 0.6 }
+                });
+            }
+        }
+
+        // เริ่มต้นอัปเดตตัวเลขคลังข้อสอบ
+        updatePoolCounterUI();
+    </script>
+</body>
+</html>
